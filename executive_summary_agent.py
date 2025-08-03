@@ -42,15 +42,17 @@ def generate_arabic_summary(text_input):
 
     نموذج العرض:
     """
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": "أنت مساعد محترف تكتب باللغة العربية نموذج عرض رسمي."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.4,
-        max_tokens=1000
-    )
+    from openai import OpenAI
+client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+
+response = client.chat.completions.create(
+    model="gpt-4",
+    messages=[{"role": "user", "content": combined_text}],
+    max_tokens=1000
+)
+
+summary = response.choices[0].message.content
+
     return response.choices[0].message.content.strip()
 
 if uploaded_files:
