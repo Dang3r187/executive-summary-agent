@@ -35,17 +35,9 @@ def extract_text_with_ocr(file):
 
 def generate_summary(text, language="arabic"):
     if language == "arabic":
-        prompt = f"يرجى تقديم ملخص تنفيذي احترافي للنص التالي:
-
-{text}
-
-الملخص:"
+        prompt = f"يرجى تقديم ملخص تنفيذي احترافي للنص التالي:\n\n{text}\n\nالملخص:"
     else:
-        prompt = f"Please provide a professional executive summary for the following text:
-
-{text}
-
-Summary:"
+        prompt = f"Please provide a professional executive summary for the following text:\n\n{text}\n\nSummary:"
 
     response = client.chat.completions.create(
         model="gpt-4",
