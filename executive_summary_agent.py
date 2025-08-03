@@ -5,7 +5,7 @@ from pdf2image import convert_from_bytes
 import pytesseract
 from PIL import Image
 
-# Initialize OpenAI client using Streamlit secrets
+# Initialize OpenAI client with sk-proj key
 client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 
 st.set_page_config(page_title="نموذج عرض لسعادة الرئيس التنفيذي", layout="centered")
@@ -13,19 +13,21 @@ st.title("📄 نموذج عرض لسعادة الرئيس التنفيذي")
 
 uploaded_file = st.file_uploader("ارفع ملف PDF أو صورة", type=["pdf", "jpg", "jpeg", "png"])
 
-def extract_text_from_pdf(file_bytes):
+
+def extract_text_from_pdf(file):
     try:
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        doc = fitz.open(stream=file.read(), filetype="pdf")
         text = ""
         for page in doc:
             text += page.get_text()
         return text.strip()
-    except Exception as e:
-        return f"PDF text extraction failed: {e}"
+    except Exception:
+        return ""
 
-def extract_text_with_ocr(file_bytes):
+
+def extract_text_with_ocr(file):
     try:
-        images = convert_from_bytes(file_bytes)
+        images = convert_from_bytes(file.read())
         text = ""
         for img in images:
             text += pytesseract.image_to_string(img, lang="ara+eng") + "\n"
@@ -33,35 +35,39 @@ def extract_text_with_ocr(file_bytes):
     except Exception as e:
         return f"OCR failed: {e}"
 
+
 def generate_summary(text, language="arabic"):
-    if language == "arabic":
-        prompt = f"يرجى تقديم ملخص تنفيذي احترافي للنص التالي:\n\n{text}\n\nالملخص:"
-    else:
-        prompt = f"Please provide a professional executive summary for the following text:\n\n{text}\n\nSummary:"
+    prompt = (
+        f"يرجى تقديم ملخص تنفيذي احترافي للنص التالي:\n\n{text}\n\nالملخص:"
+        if language == "arabic"
+        else f"Please provide a professional executive summary for the following text:\n\n{text}\n\nSummary:"
+    )
 
     response = client.chat.completions.create(
-        model="gpt-4-1106-preview",
+        model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a helpful assistant that summarizes documents."},
             {"role": "user", "content": prompt}
         ],
         max_tokens=1000
     )
+
     return response.choices[0].message.content.strip()
+
 
 if uploaded_file:
     with st.spinner("جارٍ قراءة الملف..."):
         file_bytes = uploaded_file.read()
+        uploaded_file.seek(0)
 
-        text = ""
-        if uploaded_file.type == "application/pdf":
-            text = extract_text_from_pdf(file_bytes)
+        text = extract_text_from_pdf(uploaded_file)
 
         if not text:
             st.warning("لم يتم العثور على نص قابل للقراءة. سيتم استخدام OCR...")
-            text = extract_text_with_ocr(file_bytes)
+            uploaded_file.seek(0)
+            text = extract_text_with_ocr(uploaded_file)
 
-        if not text or text.startswith("OCR failed") or text.startswith("PDF text extraction failed"):
+        if not text or text.startswith("OCR failed"):
             st.error("تعذر استخراج النص من الملف. يرجى رفع نسخة أوضح.")
         else:
             with st.spinner("جارٍ توليد الملخص التنفيذي..."):
