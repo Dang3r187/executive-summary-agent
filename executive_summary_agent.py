@@ -13,19 +13,19 @@ st.title("📄 نموذج عرض لسعادة الرئيس التنفيذي")
 
 uploaded_file = st.file_uploader("ارفع ملف PDF أو صورة", type=["pdf", "jpg", "jpeg", "png"])
 
-def extract_text_from_pdf(file):
+def extract_text_from_pdf(file_bytes):
     try:
-        doc = fitz.open(stream=file.read(), filetype="pdf")
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
         text = ""
         for page in doc:
             text += page.get_text()
         return text.strip()
-    except:
-        return ""
+    except Exception as e:
+        return f"PDF text extraction failed: {e}"
 
-def extract_text_with_ocr(file):
+def extract_text_with_ocr(file_bytes):
     try:
-        images = convert_from_bytes(file.read())
+        images = convert_from_bytes(file_bytes)
         text = ""
         for img in images:
             text += pytesseract.image_to_string(img, lang="ara+eng") + "\n"
@@ -40,8 +40,7 @@ def generate_summary(text, language="arabic"):
         prompt = f"Please provide a professional executive summary for the following text:\n\n{text}\n\nSummary:"
 
     response = client.chat.completions.create(
-        model="gpt-4-1106-preview"
-        ,
+        model="gpt-4-1106-preview",
         messages=[
             {"role": "system", "content": "You are a helpful assistant that summarizes documents."},
             {"role": "user", "content": prompt}
@@ -53,16 +52,16 @@ def generate_summary(text, language="arabic"):
 if uploaded_file:
     with st.spinner("جارٍ قراءة الملف..."):
         file_bytes = uploaded_file.read()
-        uploaded_file.seek(0)
 
-        text = extract_text_from_pdf(uploaded_file)
+        text = ""
+        if uploaded_file.type == "application/pdf":
+            text = extract_text_from_pdf(file_bytes)
 
         if not text:
             st.warning("لم يتم العثور على نص قابل للقراءة. سيتم استخدام OCR...")
-            uploaded_file.seek(0)
-            text = extract_text_with_ocr(uploaded_file)
+            text = extract_text_with_ocr(file_bytes)
 
-        if not text or text.startswith("OCR failed"):
+        if not text or text.startswith("OCR failed") or text.startswith("PDF text extraction failed"):
             st.error("تعذر استخراج النص من الملف. يرجى رفع نسخة أوضح.")
         else:
             with st.spinner("جارٍ توليد الملخص التنفيذي..."):
