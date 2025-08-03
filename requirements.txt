@@ -1,6 +1,6 @@
 streamlit
-openai
-python-docx
+openai>=1.0.0
+PyMuPDF
 pytesseract
+pdf2image
 Pillow
-pymupdf
